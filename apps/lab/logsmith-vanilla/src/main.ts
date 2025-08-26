@@ -16,6 +16,14 @@ const filterEl = document.getElementById("filter") as HTMLInputElement;
 const clearEl = document.getElementById("clear") as HTMLButtonElement;
 
 // ----------------------------------------------------------------------
+// State (memoized)
+
+let lastStart = -1;
+let lastEnd = -1;
+let lastViewportBucket = -1;  // rows, not pixels
+let lastContentHeight = '';   // px string
+
+// ----------------------------------------------------------------------
 // Log lines
 
 type LogLevel = "INFO" | "WARN" | "ERROR";
@@ -82,17 +90,22 @@ function ensurePool(n: number) {
 function render() {
   // Reads
   const total = filteredLogs.length;
-  const viewportHeight = listEl.clientHeight;
-  const rowsInView = Math.ceil(viewportHeight / ROW_HEIGHT) + BUFFER;
+  // Scroller height.
+  const viewportHeight = listEl.getBoundingClientRect().height;
+
+  // Bucket by row height so small pixel changes don't force work.
+  const viewportBucket = Math.ceil(viewportHeight / ROW_HEIGHT);
+  const rowsInView = viewportBucket + BUFFER;
 
   // Clamp startIndex to prevent overshooting.
   startIndex = Math.min(startIndex, Math.max(0, total - rowsInView));
   const endIndex = Math.min(startIndex + rowsInView, total);
 
   // Set spacer height when needed.
-  const neededHeight = Math.max(total * ROW_HEIGHT, viewportHeight);
-  if (contentEl.style.height !== `${neededHeight}px`) {
-    contentEl.style.height = `${neededHeight}px`;
+  const neededHeightPx = `${Math.max(total * ROW_HEIGHT, viewportHeight)}px`;
+  if (neededHeightPx !== lastContentHeight) {
+    contentEl.style.height = neededHeightPx;
+    lastContentHeight = neededHeightPx
   }
 
 
@@ -100,6 +113,18 @@ function render() {
   listEl.style.height = `${Math.max(total * ROW_HEIGHT, viewportHeight)}px`;
   ensurePool(rowsInView);
 
+  // Grow pool only when bucket increases
+  if (viewportBucket !== lastViewportBucket) {
+    ensurePool(rowsInView);
+    lastViewportBucket = viewportBucket;
+  }
+
+  // If the visible slice hasn't changed, skip repositioning rows.
+  if (startIndex === lastStart && endIndex === lastEnd) {
+    return;
+  }
+
+  // Update
   for (let j = 0; j < rowsInView; j++) {
     const i = startIndex + j;
     const ref = pool[j]
@@ -108,6 +133,7 @@ function render() {
     if (i >= endIndex) {
         ref.root.style.transform = 'translateY(-9999px)';
         ref.root.setAttribute('aria-hidden', 'true'); // a11y
+        ref.root.style.pointerEvents = 'none'; // remove click interception.
         continue;
     }
 
@@ -115,6 +141,7 @@ function render() {
     const row = filteredLogs[i];
     ref.root.style.transform = `translateY(${i * ROW_HEIGHT}px)`;
     ref.root.removeAttribute('aria-hidden');
+    ref.root.style.pointerEvents = '';
 
     ref.ts.textContent = row.ts;
     ref.lvl.textContent = row.level;
@@ -123,6 +150,10 @@ function render() {
     ref.lvl.className = `lvl ${row.level}`;
     ref.msg.textContent = row.message;
   }
+
+  // Maintain row position in state.
+  lastStart = startIndex;
+  lastEnd = endIndex;
 }
 
 // 1. Render scheduler: If scroll fires 10x in one frame, only render once.
@@ -171,9 +202,8 @@ function bootstrap() {
   allLogs = generateMockLogs(100_000);
   filteredLogs = allLogs;
 
-  // Window event listeners
+  // Resize listeners
   new ResizeObserver(() => scheduleRender()).observe(listEl);
-  window.addEventListener('resize', () => scheduleRender());
 
   // Div event listeners
   listEl.addEventListener("scroll", onScroll, { passive: true });
