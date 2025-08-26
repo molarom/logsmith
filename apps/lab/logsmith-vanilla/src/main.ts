@@ -1,4 +1,18 @@
 // Minimal vanilla log viewer with basic virtualization using IntersectionObserver
+
+// ----------------------------------------------------------------------
+// Layout
+
+const ROW_HEIGHT = 32;
+const BUFFER = 10;
+
+const listEl = document.getElementById("list")!;
+const filterEl = document.getElementById("filter") as HTMLInputElement;
+const clearEl = document.getElementById("clear") as HTMLButtonElement;
+
+// ----------------------------------------------------------------------
+// Log lines
+
 type LogLevel = "INFO" | "WARN" | "ERROR";
 
 interface LogLine {
@@ -7,13 +21,6 @@ interface LogLine {
   level: LogLevel;
   message: string;
 }
-
-const ROW_HEIGHT = 32;
-const BUFFER = 10;
-
-const listEl = document.getElementById("list")!;
-const filterEl = document.getElementById("filter") as HTMLInputElement;
-const clearEl = document.getElementById("clear") as HTMLButtonElement;
 
 let allLogs: LogLine[] = [];
 let filteredLogs: LogLine[] = [];
@@ -30,20 +37,11 @@ function generateMockLogs(n: number): LogLine[] {
   return arr;
 }
 
-function applyFilter() {
-  const q = filterEl.value.trim().toLowerCase();
-  if (!q) {
-    filteredLogs = allLogs;
-  } else {
-    filteredLogs = allLogs.filter(l =>
-      l.level.toLowerCase().includes(q) || l.message.toLowerCase().includes(q),
-    );
-  }
-  startIndex = 0;
-  // Batch rendering for better key-repeat behavior.
-  scheduleRender();
-}
+
+
 // ----------------------------------------------------------------------
+// Rendering
+//
 // 3. Minimal row pooling
 //
 // Stop clearing and rebuilding the entire list.
@@ -71,7 +69,6 @@ function ensurePool(n: number) {
     listEl.appendChild(frag);
     poolSize = n;
 }
-
 
 function render() {
   // Reads
@@ -106,10 +103,7 @@ function render() {
   }
 }
 
-// ----------------------------------------------------------------------
-// Render scheduler
-//
-// 1. If scroll fires 10x in one frame, only render once.
+// 1. Render scheduler: If scroll fires 10x in one frame, only render once.
 
 let renderScheduled = false;
 
@@ -122,12 +116,34 @@ function scheduleRender() {
   });
 }
 
+// Event Callback
 function onScroll() {
   // Read
   const scrollTop = listEl.scrollTop;
   startIndex = Math.floor(scrollTop / ROW_HEIGHT);
   scheduleRender(); 
 }
+
+// ----------------------------------------------------------------------
+// Filtering
+
+// Event Callback
+function applyFilter() {
+  const q = filterEl.value.trim().toLowerCase();
+  if (!q) {
+    filteredLogs = allLogs;
+  } else {
+    filteredLogs = allLogs.filter(l =>
+      l.level.toLowerCase().includes(q) || l.message.toLowerCase().includes(q),
+    );
+  }
+  startIndex = 0;
+  // Batch rendering for better key-repeat behavior.
+  scheduleRender();
+}
+
+// ----------------------------------------------------------------------
+// Bootstrap (main)
 
 function bootstrap() {
   allLogs = generateMockLogs(100_000);
