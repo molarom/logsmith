@@ -46,29 +46,37 @@ function applyFilter() {
 
 function render() {
   const total = filteredLogs.length;
+
+  // Layout
   const viewportHeight = listEl.clientHeight || window.innerHeight - 100;
   const rowsInView = Math.ceil(viewportHeight / ROW_HEIGHT) + BUFFER;
   const endIndex = Math.min(startIndex + rowsInView, total);
 
+  // Layout
   const fragment = document.createDocumentFragment();
   listEl.innerHTML = "";
   listEl.style.height = `${Math.max(total * ROW_HEIGHT, viewportHeight)}px`;
 
   for (let i = startIndex; i < endIndex; i++) {
     const row = filteredLogs[i];
+    Layout
     const div = document.createElement("div");
     div.className = "row";
+    // Paint
     div.style.top = `${i * ROW_HEIGHT}px`;
     div.innerHTML = `<span class="ts">${row.ts}</span><span class="lvl ${row.level}">${row.level}</span> — ${row.message}`;
+    // Composite
     fragment.appendChild(div);
   }
 
+  //Composite
   listEl.appendChild(fragment);
 }
 
 function onScroll() {
   const scrollTop = listEl.scrollTop;
   startIndex = Math.floor(scrollTop / ROW_HEIGHT);
+  // Composite
   render();
 }
 
