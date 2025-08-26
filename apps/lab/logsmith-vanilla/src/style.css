@@ -48,8 +48,6 @@ button {
     position: relative; 
     height: 100%; 
     overflow: auto; 
-    /* Row postioning is constant, compositor hint. */
-    will-change: scroll-position;
 }
 .row { 
     position: absolute; 

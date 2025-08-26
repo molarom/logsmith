@@ -6,7 +6,12 @@
 const ROW_HEIGHT = 32;
 const BUFFER = 10;
 
-const listEl = document.getElementById("list")!;
+const listEl = document.getElementById("list");
+// Content spacer inside scroller.
+const contentEl = document.createElement('div') as HTMLDivElement;
+contentEl.style.position = 'relative';
+listEl.appendChild(contentEl);
+
 const filterEl = document.getElementById("filter") as HTMLInputElement;
 const clearEl = document.getElementById("clear") as HTMLButtonElement;
 
@@ -70,19 +75,26 @@ function ensurePool(n: number) {
         pool.push({root, ts, lvl, msg});
     }
     // Attach new rows once.
-    listEl.appendChild(frag);
+    contentEl.appendChild(frag);
     poolSize = n;
 }
 
 function render() {
   // Reads
   const total = filteredLogs.length;
-  const viewportHeight = listEl.clientHeight || (window.innerHeight - 100);
+  const viewportHeight = listEl.clientHeight;
   const rowsInView = Math.ceil(viewportHeight / ROW_HEIGHT) + BUFFER;
+
   // Clamp startIndex to prevent overshooting.
   startIndex = Math.min(startIndex, Math.max(0, total - rowsInView));
-
   const endIndex = Math.min(startIndex + rowsInView, total);
+
+  // Set spacer height when needed.
+  const neededHeight = Math.max(total * ROW_HEIGHT, viewportHeight);
+  if (contentEl.style.height !== `${neededHeight}px`) {
+    contentEl.style.height = `${neededHeight}px`;
+  }
+
 
   // Writes
   listEl.style.height = `${Math.max(total * ROW_HEIGHT, viewportHeight)}px`;
