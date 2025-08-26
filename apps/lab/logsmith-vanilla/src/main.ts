@@ -37,8 +37,6 @@ function generateMockLogs(n: number): LogLine[] {
   return arr;
 }
 
-
-
 // ----------------------------------------------------------------------
 // Rendering
 //
@@ -46,24 +44,31 @@ function generateMockLogs(n: number): LogLine[] {
 //
 // Stop clearing and rebuilding the entire list.
 
-let pool: HTMLDivElement[] = [];
+type RowRef = {
+    root: HTMLDivElement;
+    ts: HTMLSpanElement;
+    lvl: HTMLSpanElement;
+    msg: HTMLSpanElement;
+}
+
+let pool: RowRef[] = [];
 let poolSize = 0;
 
 function ensurePool(n: number) {
     if (n <= poolSize) return;
     const frag = document.createDocumentFragment();
     for (let i = poolSize; i < n; i++) {
-        const div = document.createElement('div');
-        div.className = 'row';
+        const root = document.createElement('div');
+        root.className = 'row';
 
         // Prebuild children so we can update textContent without innerHTML
         const ts = document.createElement('span'); ts.className = 'ts';
         const lvl = document.createElement('span'); lvl.className = 'lvl';
         const dash = document.createTextNode(' - ');
         const msg = document.createElement('span'); msg.className = 'msg';
-        div.append(ts, lvl, dash, msg);
-        frag.appendChild(div);
-        pool.push(div);
+        root.append(ts, lvl, dash, msg);
+        frag.appendChild(root);
+        pool.push({root, ts, lvl, msg});
     }
     // Attach new rows once.
     listEl.appendChild(frag);
@@ -83,23 +88,24 @@ function render() {
 
   for (let j = 0; j < rowsInView; j++) {
     const i = startIndex + j;
-    const rowDiv = pool[j]
+    const ref = pool[j]
+
+    // Park offscreen
     if (i >= endIndex) {
-        rowDiv.style.transform = 'translateY(-9999px)';
+        ref.root.style.transform = 'translateY(-9999px)';
         continue;
     }
 
     // 3. Update children without touching innerHTML
     const row = filteredLogs[i];
-    rowDiv.style.transform = `translateY(${i * ROW_HEIGHT}px)`;
-    const ts = rowDiv.querySelector('.ts')!;
-    const lvl = rowDiv.querySelector('.lvl')!;
-    const msg = rowDiv.querySelector('.msg')!;
-    ts.textContent = row.ts;
-    lvl.textContent = row.level;
-    // 3. keep level color as a class only (avoid inline style churn);
-    lvl.className = `lvl ${row.level}`;
-    msg.textContent = row.message;
+    ref.root.style.transform = `translateY(${i * ROW_HEIGHT}px)`;
+
+    ref.ts.textContent = row.ts;
+    ref.lvl.textContent = row.level;
+
+    // Keep level color as a class only (avoid inline style churn);
+    ref.lvl.className = `lvl ${row.level}`;
+    ref.msg.textContent = row.message;
   }
 }
 
