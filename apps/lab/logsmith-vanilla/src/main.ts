@@ -93,12 +93,14 @@ function render() {
     // Park offscreen
     if (i >= endIndex) {
         ref.root.style.transform = 'translateY(-9999px)';
+        ref.root.setAttribute('aria-hidden', 'true'); // a11y
         continue;
     }
 
     // 3. Update children without touching innerHTML
     const row = filteredLogs[i];
     ref.root.style.transform = `translateY(${i * ROW_HEIGHT}px)`;
+    ref.root.removeAttribute('aria-hidden');
 
     ref.ts.textContent = row.ts;
     ref.lvl.textContent = row.level;
