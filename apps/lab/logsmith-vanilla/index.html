@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LogSmith (Vanilla)</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>LogSmith (Vanilla)</h1>
+        <div class="controls">
+          <input type="text" id="filter" placeholder="Filter (e.g. ERROR, user:123)" />
+          <button id="clear">Clear</button>
+        </div>
+      </header>
+      <section id="list" class="list"></section>
+      <footer><small id="metrics">LCP/CLS/TBT appear here…</small></footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

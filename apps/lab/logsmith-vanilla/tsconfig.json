@@ -1,0 +1,9 @@
+{
+  "extends": "@workspace/tsconfig/base.json",
+  "include": [
+    "src",
+    "vite.config.ts",
+    "tests",
+    "e2e"
+  ]
+}
