@@ -39,11 +39,9 @@ function generateMockLogs(n: number): LogLine[] {
 
 // ----------------------------------------------------------------------
 // Rendering
-//
-// 3. Minimal row pooling
-//
-// Stop clearing and rebuilding the entire list.
 
+
+// 3. Minimal row pooling
 type RowRef = {
     root: HTMLDivElement;
     ts: HTMLSpanElement;
@@ -54,6 +52,7 @@ type RowRef = {
 let pool: RowRef[] = [];
 let poolSize = 0;
 
+// Stop clearing and rebuilding the entire list.
 function ensurePool(n: number) {
     if (n <= poolSize) return;
     const frag = document.createDocumentFragment();
@@ -80,6 +79,9 @@ function render() {
   const total = filteredLogs.length;
   const viewportHeight = listEl.clientHeight || (window.innerHeight - 100);
   const rowsInView = Math.ceil(viewportHeight / ROW_HEIGHT) + BUFFER;
+  // Clamp startIndex to prevent overshooting.
+  startIndex = Math.min(startIndex, Math.max(0, total - rowsInView));
+
   const endIndex = Math.min(startIndex + rowsInView, total);
 
   // Writes
@@ -124,7 +126,7 @@ function scheduleRender() {
   });
 }
 
-// Event Callback
+// Event Callback: Scrolling
 function onScroll() {
   // Read
   const scrollTop = listEl.scrollTop;
@@ -156,6 +158,12 @@ function applyFilter() {
 function bootstrap() {
   allLogs = generateMockLogs(100_000);
   filteredLogs = allLogs;
+
+  // Window event listeners
+  new ResizeObserver(() => scheduleRender()).observe(listEl);
+  window.addEventListener('resize', () => scheduleRender());
+
+  // Div event listeners
   listEl.addEventListener("scroll", onScroll, { passive: true });
   filterEl.addEventListener("input", () => applyFilter());
   clearEl.addEventListener("click", () => { filterEl.value = ""; applyFilter(); });
