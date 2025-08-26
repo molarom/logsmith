@@ -43,41 +43,90 @@ function applyFilter() {
   startIndex = 0;
   render();
 }
+// ----------------------------------------------------------------------
+// 3. Minimal row pooling
+//
+// Stop clearing and rebuilding the entire list.
+
+let pool: HTMLDivElement[] = [];
+let poolSize = 0;
+
+function ensurePool(n: number) {
+    if (n <= poolSize) return;
+    const frag = document.createDocumentFragment();
+    for (let i = poolSize; i < n; i++) {
+        const div = document.createElement('div');
+        div.className = 'row';
+
+        // Prebuild children so we can update textContent without innerHTML
+        const ts = document.createElement('span'); ts.className = 'ts';
+        const lvl = document.createElement('span'); lvl.className = 'lvl';
+        const dash = document.createTextNode(' - ');
+        const msg = document.createElement('span'); msg.className = 'msg';
+        div.append(ts, lvl, dash, msg);
+        frag.appendChild(div);
+        pool.push(div);
+    }
+    // Attach new rows once.
+    listEl.appendChild(frag);
+    poolSize = n;
+}
+
 
 function render() {
+  // Reads
   const total = filteredLogs.length;
-
-  // Layout
-  const viewportHeight = listEl.clientHeight || window.innerHeight - 100;
+  const viewportHeight = listEl.clientHeight || (window.innerHeight - 100);
   const rowsInView = Math.ceil(viewportHeight / ROW_HEIGHT) + BUFFER;
   const endIndex = Math.min(startIndex + rowsInView, total);
 
-  // Layout
-  const fragment = document.createDocumentFragment();
-  listEl.innerHTML = "";
+  // Writes
   listEl.style.height = `${Math.max(total * ROW_HEIGHT, viewportHeight)}px`;
+  ensurePool(rowsInView);
 
-  for (let i = startIndex; i < endIndex; i++) {
+  for (let j = 0; j < rowsInView; j++) {
+    const i = startIndex + j;
+    const rowDiv = pool[j]
+    if (i >= endIndex) {
+        rowDiv.style.transform = 'translateY(-9999px)';
+        continue;
+    }
+
+    // 3. Update children without touching innerHTML
     const row = filteredLogs[i];
-    Layout
-    const div = document.createElement("div");
-    div.className = "row";
-    // Paint
-    div.style.top = `${i * ROW_HEIGHT}px`;
-    div.innerHTML = `<span class="ts">${row.ts}</span><span class="lvl ${row.level}">${row.level}</span> — ${row.message}`;
-    // Composite
-    fragment.appendChild(div);
+    rowDiv.style.transform = `translateY(${i * ROW_HEIGHT}px)`;
+    const ts = rowDiv.querySelector('.ts')!;
+    const lvl = rowDiv.querySelector('.lvl')!;
+    const msg = rowDiv.querySelector('.msg')!;
+    ts.textContent = row.ts;
+    lvl.textContent = row.level;
+    // 3. keep level color as a class only (avoid inline style churn);
+    lvl.className = `lvl ${row.level}`;
+    msg.textContent = row.message;
   }
+}
 
-  //Composite
-  listEl.appendChild(fragment);
+// ----------------------------------------------------------------------
+// Render scheduler
+//
+// 1. If scroll fires 10x in one frame, only render once.
+
+let renderScheduled = false;
+
+function scheduleRender() {
+  if (renderScheduled) return; 
+  renderScheduled = true;
+  requestAnimationFrame(() => {
+    renderScheduled = false;
+    render();
+  });
 }
 
 function onScroll() {
+  // Read
   const scrollTop = listEl.scrollTop;
   startIndex = Math.floor(scrollTop / ROW_HEIGHT);
-  // Composite
-  render();
+  scheduleRender(); 
 }
 
 function bootstrap() {
