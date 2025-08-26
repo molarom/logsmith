@@ -196,6 +196,88 @@ function applyFilter() {
 }
 
 // ----------------------------------------------------------------------
+// Keyboard shortcuts: "/" → focus filter, "Esc" → clear it
+
+function setupGlobalShortcuts() {
+  function isTypingContext(el: Element | null): boolean {
+    if (!el || !(el instanceof HTMLElement)) return false;
+    const tag = el.tagName;
+    return (
+      tag === "INPUT" ||
+      tag === "TEXTAREA" ||
+      (el as HTMLElement).isContentEditable
+    );
+  }
+
+  window.addEventListener("keydown", (e) => {
+    const active = document.activeElement;
+
+    // "/" focuses the filter unless user is already typing somewhere
+    if (e.key === "/" && !isTypingContext(active)) {
+      e.preventDefault();
+      filterEl.focus();
+      filterEl.select?.();
+      return;
+    }
+
+    // "Escape" clears the filter if it's non-empty and focus isn't inside another editor
+    if (e.key === "Escape") {
+      const typingElsewhere =
+        isTypingContext(active) && active !== filterEl;
+      if (!typingElsewhere && filterEl.value.length > 0) {
+        filterEl.value = "";
+        applyFilter(); // schedules a render
+      }
+    }
+  });
+}
+
+// ----------------------------------------------------------------------
+// FPS meter: fixed, composited, updates ~1 Hz
+
+function setupFPSMeter() {
+  // Avoid duplicates on HMR
+  if (document.querySelector('[data-fps="meter"]')) return;
+
+  const badge = document.createElement("div");
+  badge.setAttribute("data-fps", "meter");
+  badge.textContent = "FPS: –";
+  // Fixed-position box; updates are text-only (paint of small rect)
+  badge.style.position = "fixed";
+  badge.style.right = "8px";
+  badge.style.bottom = "8px";
+  badge.style.zIndex = "2147483647";
+  badge.style.fontFamily =
+    'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+  badge.style.fontSize = "12px";
+  badge.style.lineHeight = "1";
+  badge.style.padding = "4px 6px";
+  badge.style.borderRadius = "6px";
+  badge.style.background = "rgba(0,0,0,0.6)";
+  badge.style.color = "white";
+  badge.style.opacity = "0.75";
+  badge.style.pointerEvents = "none";
+  badge.style.transform = "translateZ(0)"; // ensure composited
+  badge.style.willChange = "transform, opacity";
+  document.body.appendChild(badge);
+
+  let frames = 0;
+  let lastUpdate = performance.now();
+
+  function tick(now: number) {
+    frames++;
+    if (now - lastUpdate >= 1000) {
+      const fps = Math.round((frames * 1000) / (now - lastUpdate));
+      badge.textContent = `FPS: ${fps}`;
+      frames = 0;
+      lastUpdate = now;
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+// ----------------------------------------------------------------------
 // Bootstrap (main)
 
 function bootstrap() {
@@ -209,7 +291,9 @@ function bootstrap() {
   listEl.addEventListener("scroll", onScroll, { passive: true });
   filterEl.addEventListener("input", () => applyFilter());
   clearEl.addEventListener("click", () => { filterEl.value = ""; applyFilter(); });
+  setupGlobalShortcuts();
+  setupFPSMeter();
   render();
 }
-
-bootstrap();
+ 
+ bootstrap();
