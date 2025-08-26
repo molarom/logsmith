@@ -9,7 +9,6 @@ interface LogLine {
 }
 
 const ROW_HEIGHT = 32;
-const VISIBLE_ROWS = 30;
 const BUFFER = 10;
 
 const listEl = document.getElementById("list")!;
@@ -41,7 +40,8 @@ function applyFilter() {
     );
   }
   startIndex = 0;
-  render();
+  // Batch rendering for better key-repeat behavior.
+  scheduleRender();
 }
 // ----------------------------------------------------------------------
 // 3. Minimal row pooling

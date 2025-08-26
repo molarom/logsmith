@@ -44,7 +44,13 @@ button {
     cursor: pointer; 
 }
 
-.list { position: relative; height: 100%; overflow: auto; }
+.list { 
+    position: relative; 
+    height: 100%; 
+    overflow: auto; 
+    /* Row postioning is constant, compositor hint. */
+    will-change: scroll-position;
+}
 .row { 
     position: absolute; 
     will-change: transform;
